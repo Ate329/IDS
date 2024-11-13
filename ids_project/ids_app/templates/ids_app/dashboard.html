@@ -1,0 +1,515 @@
+{% extends 'ids_app/base.html' %}
+
+{% block title %}IDS Dashboard{% endblock %}
+
+{% block extra_head %}
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/moment@2.29.1/moment.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chartjs-adapter-moment@1.0.0/dist/chartjs-adapter-moment.min.js"></script>
+    <style>
+        body {
+            background-color: #1a2234;
+            color: #e0e0e0;
+        }
+        .switch {
+            position: relative;
+            display: inline-block;
+            width: 60px;
+            height: 34px;
+        }
+        .switch input {
+            opacity: 0;
+            width: 0;
+            height: 0;
+        }
+        .slider {
+            position: absolute;
+            cursor: pointer;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background-color: #ccc;
+            transition: .4s;
+            border-radius: 34px;
+        }
+        .slider:before {
+            position: absolute;
+            content: "";
+            height: 26px;
+            width: 26px;
+            left: 4px;
+            bottom: 4px;
+            background-color: white;
+            transition: .4s;
+            border-radius: 50%;
+        }
+        input:checked + .slider {
+            background-color: #2196F3;
+        }
+        input:checked + .slider:before {
+            transform: translateX(26px);
+        }
+        input:checked + .slider.green {
+            background-color: #4CAF50;
+        }
+        .chart-container {
+            position: relative;
+            height: 300px;
+            width: 100%;
+            overflow-x: auto;
+        }
+        #historical-chart {
+            min-width: 1000px;
+        }
+    </style>
+{% endblock %}
+
+{% block content %}
+<div class="container mx-auto px-4 py-8">
+    <h1 class="text-4xl font-bold mb-8 text-white">IDS Dashboard</h1>
+
+    <div class="bg-darkBlue-800 rounded-lg shadow-md p-6 mb-8">
+        <h2 class="text-2xl font-semibold mb-4 text-white">IDS Status</h2>
+        <label class="switch">
+            <input type="checkbox" id="ids-toggle" checked="false">
+            <span class="slider green"></span>
+        </label>
+        <span class="ml-3 text-sm font-medium text-gray-300" id="ids-status">IDS is inactive</span>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-3 gap-8 mb-8">
+        <div class="bg-gray-800 rounded-lg shadow-md p-6">
+            <h3 class="text-xl font-semibold mb-2 text-white">Total Packets</h3>
+            <p class="text-3xl font-bold text-white" id="total-packets">0</p>
+        </div>
+        <div class="bg-gray-800 rounded-lg shadow-md p-6">
+            <h3 class="text-xl font-semibold mb-2 text-white">Normal Packets</h3>
+            <p class="text-3xl font-bold text-green-400" id="normal-packets">0</p>
+        </div>
+        <div class="bg-gray-800 rounded-lg shadow-md p-6">
+            <h3 class="text-xl font-semibold mb-2 text-white">Anomaly Packets</h3>
+            <p class="text-3xl font-bold text-red-400" id="anomaly-packets">0</p>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 gap-8 mb-8">
+        <div class="bg-gray-800 rounded-lg shadow-md p-6">
+            <h2 class="text-2xl font-semibold mb-4 text-white">24-Hour Traffic</h2>
+            <div class="chart-container">
+                <canvas id="historical-chart"></canvas>
+            </div>
+        </div>
+    </div>
+
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+        <div class="bg-gray-800 rounded-lg shadow-md p-6">
+            <h2 class="text-2xl font-semibold mb-4 text-white">Traffic Overview</h2>
+            <canvas id="traffic-overview-chart"></canvas>
+        </div>
+        <div class="bg-gray-800 rounded-lg shadow-md p-6">
+            <h2 class="text-2xl font-semibold mb-4 text-white">Protocol Distribution</h2>
+            <canvas id="protocol-chart"></canvas>
+        </div>
+    </div>
+    <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+        <div class="bg-gray-800 rounded-lg shadow-md p-6">
+            <h2 class="text-2xl font-semibold mb-4 text-white">Flag Distribution</h2>
+            <canvas id="flag-chart"></canvas>
+        </div>
+    </div>
+</div>
+
+<script>
+    const idsToggle = document.getElementById('ids-toggle');
+    const idsStatus = document.getElementById('ids-status');
+    const totalPackets = document.getElementById('total-packets');
+    const normalPackets = document.getElementById('normal-packets');
+    const anomalyPackets = document.getElementById('anomaly-packets');
+
+    const historicalCtx = document.getElementById('historical-chart').getContext('2d');
+    const trafficOverviewCtx = document.getElementById('traffic-overview-chart').getContext('2d');
+    const protocolCtx = document.getElementById('protocol-chart').getContext('2d');
+    const flagCtx = document.getElementById('flag-chart').getContext('2d');
+
+    let historicalChart, trafficOverviewChart, protocolChart, flagChart;
+    let historicalData = [];
+    const INTERVALS_PER_DAY = 144; // 10-minute intervals for 24 hours
+
+    function throttle(func, limit) {
+        let inThrottle;
+        return function() {
+            const args = arguments;
+            const context = this;
+            if (!inThrottle) {
+                func.apply(context, args);
+                inThrottle = true;
+                setTimeout(() => inThrottle = false, limit);
+            }
+        }
+    }
+
+    function getDarkThemeOptions() {
+        return {
+            plugins: {
+                legend: {
+                    labels: {
+                        color: '#e0e0e0'
+                    }
+                },
+                title: {
+                    color: '#e0e0e0'
+                }
+            },
+            scales: {
+                x: {
+                    ticks: { color: '#e0e0e0' },
+                    grid: { color: '#2c3e50' }
+                },
+                y: {
+                    ticks: { color: '#e0e0e0' },
+                    grid: { color: '#2c3e50' }
+                }
+            }
+        };
+    }
+
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+
+    function updateIDSStatus() {
+        fetch('/api/ids-status/')
+            .then(response => response.json())
+            .then(data => {
+                console.log("IDS status:", data);
+                idsToggle.checked = data.is_active;
+                idsStatus.textContent = data.is_active ? 'IDS is active' : 'IDS is inactive';
+                idsToggle.nextElementSibling.classList.toggle('green', data.is_active);
+            })
+            .catch(error => console.error('Error fetching IDS status:', error));
+    }
+
+    function toggleIDS() {
+        console.log("Toggling IDS");
+        const csrftoken = getCookie('csrftoken');
+        fetch('/api/toggle-ids/', {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken,
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({}),
+        })
+        .then(response => {
+            if (!response.ok) {
+                return response.json().then(err => { throw err; });
+            }
+            return response.json();
+        })
+        .then(data => {
+            console.log("IDS toggled:", data);
+            idsToggle.checked = data.is_active;
+            idsStatus.textContent = data.is_active ? 'IDS is active' : 'IDS is inactive';
+            idsToggle.nextElementSibling.classList.toggle('green', data.is_active);
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('An error occurred while toggling the IDS: ' + (error.error || 'Unknown error'));
+            idsToggle.checked = !idsToggle.checked;
+            idsToggle.nextElementSibling.classList.toggle('green', idsToggle.checked);
+        });
+    }
+
+    idsToggle.addEventListener('change', toggleIDS);
+
+    function initializeHistoricalChart() {
+        historicalChart = new Chart(historicalCtx, {
+            type: 'bar',
+            data: {
+                datasets: [{
+                    label: 'Normal Packets',
+                    backgroundColor: 'rgba(16, 185, 129, 0.8)',
+                    borderColor: 'rgba(16, 185, 129, 1)',
+                    borderWidth: 1
+                }, {
+                    label: 'Anomaly Packets',
+                    backgroundColor: 'rgba(239, 68, 68, 0.8)',
+                    borderColor: 'rgba(239, 68, 68, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                scales: {
+                    x: {
+                        type: 'time',
+                        time: {
+                            unit: 'hour',
+                            displayFormats: {
+                                hour: 'HH:mm'
+                            },
+                            tooltipFormat: 'YYYY-MM-DD HH:mm'
+                        },
+                        title: {
+                            display: true,
+                            text: 'Time',
+                            color: '#e0e0e0'
+                        },
+                        ticks: { color: '#e0e0e0' },
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        stacked: true
+                    },
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Number of Packets',
+                            color: '#e0e0e0'
+                        },
+                        ticks: { color: '#e0e0e0' },
+                        grid: { color: 'rgba(255, 255, 255, 0.1)' },
+                        stacked: true
+                    }
+                },
+                plugins: {
+                    legend: {
+                        display: true,
+                        labels: { color: '#e0e0e0' }
+                    },
+                    title: {
+                        display: true,
+                        text: 'Packets over last 24 hours',
+                        color: '#e0e0e0'
+                    },
+                    tooltip: {
+                        callbacks: {
+                            label: function(context) {
+                                const label = context.dataset.label;
+                                const value = context.raw || 0;
+                                return `${label}: ${value}`;
+                            },
+                            footer: function(tooltipItems) {
+                                const total = tooltipItems.reduce((sum, item) => sum + (item.raw || 0), 0);
+                                return `Total: ${total}`;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    
+        // Initialize historical data
+        const now = moment();
+        for (let i = 0; i < INTERVALS_PER_DAY; i++) {
+            historicalData.push({
+                time: moment(now).subtract((INTERVALS_PER_DAY - i) * 10, 'minutes'),
+                normal: 0,
+                anomaly: 0
+            });
+        }
+    
+        updateHistoricalChart();
+    }
+
+    function updateHistoricalData(newData) {
+        const now = moment();
+        
+        // Only add a new data point if it's been at least 10 minutes since the last one
+        if (historicalData.length === 0 || now.diff(historicalData[historicalData.length - 1].time, 'minutes') >= 10) {
+            // Remove oldest data point if we have a full day's worth
+            if (historicalData.length >= INTERVALS_PER_DAY) {
+                historicalData.shift();
+            }
+    
+            // Add new data point
+            historicalData.push({
+                time: now,
+                normal: newData.normal || 0,
+                anomaly: newData.anomaly || 0
+            });
+    
+            updateHistoricalChart();
+        } else {
+            // Update the latest data point
+            const latestData = historicalData[historicalData.length - 1];
+            latestData.normal = newData.normal || 0;
+            latestData.anomaly = newData.anomaly || 0;
+            updateHistoricalChart();
+        }
+    }
+
+    function updateHistoricalChart() {
+        historicalChart.data.labels = historicalData.map(d => d.time);
+        historicalChart.data.datasets[0].data = historicalData.map(d => d.normal);
+        historicalChart.data.datasets[1].data = historicalData.map(d => d.anomaly);
+    
+        historicalChart.options.scales.x.min = historicalData[0].time.toDate();
+        historicalChart.options.scales.x.max = historicalData[historicalData.length - 1].time.toDate();
+    
+        const maxY = Math.max(...historicalData.map(d => d.normal + d.anomaly));
+        historicalChart.options.scales.y.max = maxY > 0 ? maxY * 1.1 : 100;
+    
+        historicalChart.update();
+    }
+
+    function updateTrafficOverviewChart(normalCount, anomalyCount) {
+        console.log("Updating traffic overview chart");
+        trafficOverviewChart.data.datasets[0].data = [normalCount, anomalyCount];
+        trafficOverviewChart.update();
+    }
+
+    function updateProtocolChartFromHistorical(protocolData) {
+        console.log("Updating protocol chart");
+        protocolChart.data.labels = Object.keys(protocolData);
+        protocolChart.data.datasets[0].data = Object.values(protocolData);
+        protocolChart.update();
+    }
+
+    function updateFlagChartFromHistorical(flagData) {
+        console.log("Updating flag chart");
+        flagChart.data.labels = Object.keys(flagData);
+        flagChart.data.datasets[0].data = Object.values(flagData);
+        flagChart.update();
+    }
+
+    function fetchLatestData() {
+        Promise.all([
+            fetch('/api/traffic-data/').then(response => response.json()),
+            fetch('/api/get-csv-data/').then(response => response.json())
+        ])
+        .then(([trafficData, csvData]) => {
+            console.log("Received new traffic data:", trafficData);
+            console.log("Received new CSV data:", csvData);
+    
+            // Update real-time counters
+            totalPackets.textContent = trafficData.total_packets || '0';
+            normalPackets.textContent = trafficData.normal_packets || '0';
+            anomalyPackets.textContent = trafficData.anomaly_packets || '0';
+    
+            // Update historical data
+            updateHistoricalData({
+                normal: parseInt(trafficData.normal_packets) || 0,
+                anomaly: parseInt(trafficData.anomaly_packets) || 0
+            });
+    
+            // Update other charts
+            updateTrafficOverviewChart(trafficData.normal_packets || 0, trafficData.anomaly_packets || 0);
+            updateProtocolChartFromHistorical(csvData.protocol_types || {});
+            updateFlagChartFromHistorical(csvData.flags || {});
+        })
+        .catch(error => {
+            console.error('Error fetching latest data:', error);
+        });
+    }
+
+    function initializeOtherCharts() {
+        trafficOverviewChart = new Chart(trafficOverviewCtx, {
+            type: 'pie',
+            data: {
+                labels: ['Normal', 'Anomaly'],
+                datasets: [{
+                    data: [0, 0],
+                    backgroundColor: ['#10B981', '#EF4444'],
+                }]
+            },
+            options: {
+                ...getDarkThemeOptions(),
+                responsive: true,
+                plugins: {
+                    ...getDarkThemeOptions().plugins,
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Traffic Distribution'
+                    }
+                }
+            }
+        });
+
+        protocolChart = new Chart(protocolCtx, {
+            type: 'pie',
+            data: {
+                labels: [],
+                datasets: [{
+                    data: [],
+                    backgroundColor: [
+                        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'
+                    ],
+                }]
+            },
+            options: {
+                ...getDarkThemeOptions(),
+                responsive: true,
+                plugins: {
+                    ...getDarkThemeOptions().plugins,
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Protocol Distribution'
+                    }
+                }
+            }
+        });
+
+        flagChart = new Chart(flagCtx, {
+            type: 'pie',
+            data: {
+                labels: [],
+                datasets: [{
+                    data: [],
+                    backgroundColor: [
+                        '#FF6384', '#36A2EB', '#FFCE56', '#4BC0C0', '#9966FF'
+                    ],
+                }]
+            },
+            options: {
+                ...getDarkThemeOptions(),
+                responsive: true,
+                plugins: {
+                    ...getDarkThemeOptions().plugins,
+                    legend: {
+                        position: 'top',
+                    },
+                    title: {
+                        display: true,
+                        text: 'Flag Distribution'
+                    }
+                }
+            }
+        });
+    }
+
+    function initializeDashboard() {
+        console.log("Dashboard initialized");
+        updateIDSStatus();
+        initializeHistoricalChart();
+        initializeOtherCharts();
+        fetchLatestData(); // Initial data fetch
+    
+        setInterval(() => {
+            updateIDSStatus();
+            fetchLatestData();
+        }, 2000); // Update every 2 seconds
+    }
+
+    // Call initialization function when the page loads
+    window.addEventListener('load', initializeDashboard);
+</script>
+{% endblock %}

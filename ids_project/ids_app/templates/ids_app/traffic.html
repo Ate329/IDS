@@ -1,0 +1,57 @@
+{% extends 'ids_app/base.html' %}
+
+{% block title %}Traffic Data{% endblock %}
+
+{% block content %}
+<div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
+    <div class="px-4 py-5 sm:px-6">
+        <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+            Traffic Data
+        </h3>
+    </div>
+    <div class="border-t border-gray-200 dark:border-gray-700">
+        <div id="trafficContent" class="p-4 overflow-x-auto">
+            <table class="min-w-full divide-y divide-gray-200 dark:divide-gray-700">
+                <thead class="bg-gray-50 dark:bg-gray-700">
+                    <tr id="headerRow"></tr>
+                </thead>
+                <tbody id="dataRows" class="bg-white dark:bg-gray-800 divide-y divide-gray-200 dark:divide-gray-700">
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    function fetchTrafficData() {
+        fetch('/api/get-traffic-data-csv/')
+            .then(response => response.text())
+            .then(data => {
+                const rows = data.split('\n');
+                const headers = rows[0].split(',');
+                
+                let headerHtml = '';
+                headers.forEach(header => {
+                    headerHtml += `<th class="px-6 py-3 text-left text-xs font-medium text-gray-500 dark:text-gray-300 uppercase tracking-wider">${header}</th>`;
+                });
+                document.getElementById('headerRow').innerHTML = headerHtml;
+
+                let dataHtml = '';
+                for (let i = 1; i < rows.length; i++) {
+                    const cells = rows[i].split(',');
+                    if (cells.length === headers.length) {
+                        dataHtml += '<tr>';
+                        cells.forEach(cell => {
+                            dataHtml += `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900 dark:text-gray-200">${cell}</td>`;
+                        });
+                        dataHtml += '</tr>';
+                    }
+                }
+                document.getElementById('dataRows').innerHTML = dataHtml;
+            });
+    }
+
+    fetchTrafficData();
+    setInterval(fetchTrafficData, 5000);  // Refresh data every 5 seconds
+</script>
+{% endblock %}

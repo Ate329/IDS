@@ -1,0 +1,7 @@
+*.pyc
+ids_log.txt
+traffic_data.csv
+db.sqlite3
+.venv/
+__pycache__/
+migrations/

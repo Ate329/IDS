@@ -1,0 +1,29 @@
+{% extends 'ids_app/base.html' %}
+
+{% block title %}IDS Logs{% endblock %}
+
+{% block content %}
+<div class="bg-white dark:bg-gray-800 shadow overflow-hidden sm:rounded-lg">
+    <div class="px-4 py-5 sm:px-6">
+        <h3 class="text-lg leading-6 font-medium text-gray-900 dark:text-white">
+            IDS Logs
+        </h3>
+    </div>
+    <div class="border-t border-gray-200 dark:border-gray-700">
+        <pre id="logContent" class="p-4 text-sm text-gray-900 dark:text-gray-200 overflow-x-auto"></pre>
+    </div>
+</div>
+
+<script>
+    function fetchLogs() {
+        fetch('/api/get-logs/')
+            .then(response => response.text())
+            .then(data => {
+                document.getElementById('logContent').textContent = data;
+            });
+    }
+
+    fetchLogs();
+    setInterval(fetchLogs, 5000);  // Refresh logs every 5 seconds
+</script>
+{% endblock %}

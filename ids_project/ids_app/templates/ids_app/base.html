@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en" class="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>{% block title %}IDS Dashboard{% endblock %}</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        darkBlue: {
+                            100: '#e0e7ff',
+                            200: '#c7d2fe',
+                            300: '#a5b4fc',
+                            400: '#818cf8',
+                            500: '#6366f1',
+                            600: '#4f46e5',
+                            700: '#3730a3',
+                            800: '#1e293b',
+                            900: '#1a2234',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background-color: #1a2234;
+            color: #e0e7ff;
+        }
+    </style>
+    {% block extra_head %}{% endblock %}
+</head>
+<body class="bg-darkBlue-900 text-darkBlue-100">
+    <nav class="bg-darkBlue-800 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex items-center justify-between h-16">
+                <div class="flex items-center">
+                    <button id="menuToggle" class="text-darkBlue-300 hover:text-darkBlue-200 focus:outline-none focus:text-darkBlue-200">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+                        </svg>
+                    </button>
+                    <div class="ml-4 flex-shrink-0 flex items-center">
+                        <span class="font-semibold text-xl text-darkBlue-100">IDS</span>
+                    </div>
+                </div>
+                <div class="flex items-center">
+                    <button onclick="toggleDarkMode()" class="ml-4 text-darkBlue-300 hover:text-darkBlue-200 focus:outline-none focus:text-darkBlue-200">
+                        <svg class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"></path>
+                        </svg>
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <div id="sideMenu" class="fixed left-0 top-0 w-64 h-full bg-darkBlue-800 shadow-md transform -translate-x-full transition-transform duration-300 ease-in-out z-50">
+        <div class="p-4">
+            <a href="{% url 'dashboard' %}" class="block py-2 px-4 text-darkBlue-100 hover:bg-darkBlue-700">Dashboard</a>
+            <a href="{% url 'logs' %}" class="block py-2 px-4 text-darkBlue-100 hover:bg-darkBlue-700">Logs</a>
+            <a href="{% url 'traffic' %}" class="block py-2 px-4 text-darkBlue-100 hover:bg-darkBlue-700">Traffic</a>
+            <a href="{% url 'settings' %}" class="block py-2 px-4 text-darkBlue-100 hover:bg-darkBlue-700">Settings</a>
+        </div>
+    </div>
+
+    <main class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8 relative z-0">
+        {% block content %}{% endblock %}
+    </main>
+
+    <script>
+        const menuToggle = document.getElementById('menuToggle');
+        const sideMenu = document.getElementById('sideMenu');
+
+        menuToggle.addEventListener('click', () => {
+            sideMenu.classList.toggle('-translate-x-full');
+        });
+    </script>
+</body>
+</html>

@@ -1,0 +1,284 @@
+{% extends 'ids_app/base.html' %}
+
+{% block title %}IDS Settings{% endblock %}
+
+{% block extra_head %}
+<style>
+    body {
+        background-color: #1a2234;
+        color: #e0e0e0;
+    }
+    .settings-container {
+        max-width: 800px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    .settings-section {
+        margin-bottom: 30px;
+    }
+    .section-title {
+        font-size: 1.2rem;
+        font-weight: bold;
+        margin-bottom: 15px;
+        color: #e2e8f0;
+    }
+    .form-group {
+        margin-bottom: 15px;
+    }
+    .form-label {
+        display: block;
+        margin-bottom: 5px;
+        color: #a0aec0;
+    }
+    .form-input {
+        width: 100%;
+        padding: 8px;
+        background-color: #2d3748;
+        color: #e2e8f0;
+        border: 1px solid #4a5568;
+        border-radius: 4px;
+    }
+    .btn {
+        padding: 8px 16px;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+        font-weight: bold;
+    }
+    .btn-primary {
+        background-color: #4299e1;
+        color: white;
+    }
+    .btn-danger {
+        background-color: #f56565;
+        color: white;
+    }
+    .btn-group {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+    }
+    .checkbox-label {
+        display: flex;
+        align-items: center;
+        cursor: pointer;
+    }
+    .checkbox-label input {
+        margin-right: 8px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="settings-container">
+    <h2 class="section-title">IDS Settings</h2>
+
+    <div class="settings-section">
+        <h3 class="section-title">Network Interface</h3>
+        <div class="form-group">
+            <select id="interfaceSelect" class="form-input">
+                <option value="">Loading interfaces...</option>
+            </select>
+        </div>
+        <button id="setInterfaceBtn" class="btn btn-primary">Set Interface</button>
+    </div>
+
+    <div class="settings-section">
+        <h3 class="section-title">IDS Settings</h3>
+        <div class="form-group">
+            <label class="checkbox-label">
+                <input type="checkbox" id="detectInternalCheckbox">
+                <span>Detect Internal Network Traffic</span>
+            </label>
+        </div>
+        <button id="saveIDSSettingsBtn" class="btn btn-primary">Save IDS Settings</button>
+    </div>
+
+    <div class="settings-section">
+        <h3 class="section-title">Email Settings</h3>
+        <form id="emailSettingsForm">
+            <div class="form-group">
+                <label for="emailSender" class="form-label">Email Sender</label>
+                <input type="email" id="emailSender" name="email_sender" class="form-input">
+            </div>
+            <div class="form-group">
+                <label for="emailPassword" class="form-label">Email Password</label>
+                <input type="password" id="emailPassword" name="email_password" class="form-input">
+            </div>
+            <div class="form-group">
+                <label for="emailRecipient" class="form-label">Email Recipient</label>
+                <input type="email" id="emailRecipient" name="email_recipient" class="form-input">
+            </div>
+            <div class="form-group">
+                <label for="smtpServer" class="form-label">SMTP Server</label>
+                <input type="text" id="smtpServer" name="smtp_server" class="form-input">
+            </div>
+            <div class="form-group">
+                <label for="smtpPort" class="form-label">SMTP Port</label>
+                <input type="number" id="smtpPort" name="smtp_port" class="form-input">
+            </div>
+            <button type="submit" class="btn btn-primary">Save Email Settings</button>
+        </form>
+    </div>
+
+    <div class="settings-section">
+        <h3 class="section-title">Maintenance</h3>
+        <div class="btn-group">
+            <button id="cleanDatabaseBtn" class="btn btn-danger">Clean Database</button>
+            <button id="cleanLogFileBtn" class="btn btn-danger">Clean Log File</button>
+            <button id="cleanTrafficDataBtn" class="btn btn-danger">Clean Traffic Data</button>
+            <button id="cleanScalerBtn" class="btn btn-danger">Clean Scaler</button>
+        </div>
+    </div>
+</div>
+
+<script>
+    function getCookie(name) {
+        let cookieValue = null;
+        if (document.cookie && document.cookie !== '') {
+            const cookies = document.cookie.split(';');
+            for (let i = 0; i < cookies.length; i++) {
+                const cookie = cookies[i].trim();
+                if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                    cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                    break;
+                }
+            }
+        }
+        return cookieValue;
+    }
+    const csrftoken = getCookie('csrftoken');
+
+    // Network Interface
+    const interfaceSelect = document.getElementById('interfaceSelect');
+    const setInterfaceBtn = document.getElementById('setInterfaceBtn');
+
+    fetch('/api/get-available-interfaces/')
+        .then(response => response.json())
+        .then(data => {
+            interfaceSelect.innerHTML = '';
+            data.interfaces.forEach(interface => {
+                const option = document.createElement('option');
+                option.value = interface;
+                option.textContent = interface;
+                interfaceSelect.appendChild(option);
+            });
+        });
+
+    fetch('/api/get-current-interface/')
+        .then(response => response.json())
+        .then(data => {
+            if (data.interface) {
+                interfaceSelect.value = data.interface;
+            }
+        });
+
+    setInterfaceBtn.addEventListener('click', function() {
+        const selectedInterface = interfaceSelect.value;
+        if (selectedInterface) {
+            fetch('/api/set-interface/', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/x-www-form-urlencoded',
+                    'X-CSRFToken': csrftoken
+                },
+                body: `interface=${selectedInterface}`
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    alert('Interface set successfully');
+                } else {
+                    alert('Failed to set interface: ' + data.error);
+                }
+            });
+        }
+    });
+
+    // IDS Settings
+    const detectInternalCheckbox = document.getElementById('detectInternalCheckbox');
+    const saveIDSSettingsBtn = document.getElementById('saveIDSSettingsBtn');
+
+    fetch('/api/get-ids-settings/')
+        .then(response => response.json())
+        .then(data => {
+            detectInternalCheckbox.checked = data.detect_internal;
+        });
+
+    saveIDSSettingsBtn.addEventListener('click', function() {
+        const formData = new FormData();
+        formData.append('detect_internal', detectInternalCheckbox.checked);
+
+        fetch('/api/update-ids-settings/', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': csrftoken
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('IDS settings updated successfully');
+            } else {
+                alert('Failed to update IDS settings: ' + data.error);
+            }
+        });
+    });
+
+    // Email Settings
+    const emailSettingsForm = document.getElementById('emailSettingsForm');
+
+    fetch('/api/get-email-settings/')
+        .then(response => response.json())
+        .then(data => {
+            document.getElementById('emailSender').value = data.email_sender;
+            document.getElementById('emailRecipient').value = data.email_recipient;
+            document.getElementById('smtpServer').value = data.smtp_server;
+            document.getElementById('smtpPort').value = data.smtp_port;
+        });
+
+    emailSettingsForm.addEventListener('submit', function(e) {
+        e.preventDefault();
+        const formData = new FormData(this);
+        fetch('/api/update-email-settings/', {
+            method: 'POST',
+            body: formData,
+            headers: {
+                'X-CSRFToken': csrftoken
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert('Email settings updated successfully');
+            } else {
+                alert('Failed to update email settings: ' + data.error);
+            }
+        });
+    });
+
+    // Maintenance Functions
+    function cleanData(endpoint, buttonId) {
+        fetch(endpoint, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': csrftoken
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                alert(data.message);
+            } else {
+                alert('Failed: ' + data.error);
+            }
+        });
+    }
+
+    document.getElementById('cleanDatabaseBtn').addEventListener('click', () => cleanData('/api/clean-database/', 'cleanDatabaseBtn'));
+    document.getElementById('cleanLogFileBtn').addEventListener('click', () => cleanData('/api/clean-log-file/', 'cleanLogFileBtn'));
+    document.getElementById('cleanTrafficDataBtn').addEventListener('click', () => cleanData('/api/clean-traffic-data/', 'cleanTrafficDataBtn'));
+    document.getElementById('cleanScalerBtn').addEventListener('click', () => cleanData('/api/clean-scaler/', 'cleanScalerBtn'));
+</script>
+{% endblock %}
