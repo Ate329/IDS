@@ -23,9 +23,9 @@ def main():
             "forget to activate a virtual environment?"
         ) from exc
 
-    # Open the browser after starting the server
+    # Check if the command is 'runserver', and open the browser
     if len(sys.argv) > 1 and sys.argv[1] == "runserver":
-        Timer(3, open_browser).start()  # Wait 3 seconds before opening the browser
+        Timer(3, open_browser).start()  # Open browser after 3 seconds
 
     execute_from_command_line(sys.argv)
 

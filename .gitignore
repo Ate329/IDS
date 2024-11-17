@@ -5,3 +5,5 @@ db.sqlite3
 .venv/
 __pycache__/
 migrations/
+build/
+*.spec
