@@ -77,7 +77,7 @@ def setup_virtualenv():
     subprocess.run([pip_path, "install", "-r", os.path.join(PROJECT_DIR, REQUIREMENTS_FILE)], check=True)
 
 def run_migrations():
-    """Run database migrations."""
+    """Run makemigrations and migrate commands."""
     manage_py_dir = os.path.join(PROJECT_DIR, "ids_project")
     manage_py_path = os.path.join(manage_py_dir, "manage.py")
     venv_path = os.path.join(PROJECT_DIR, VENV_DIR)
@@ -87,8 +87,27 @@ def run_migrations():
         logging.error(f"manage.py not found at {manage_py_path}")
         sys.exit(1)
 
-    logging.info("Applying database migrations...")
+    # Run makemigrations
+    logging.info("Running makemigrations...")
+    try:
+        result = subprocess.run(
+            [python_path, "manage.py", "makemigrations"],
+            check=True,
+            cwd=manage_py_dir,
+            env=os.environ.copy(),
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True
+        )
+        logging.info(f"Makemigrations completed successfully:\n{result.stdout}")
+    except subprocess.CalledProcessError as e:
+        logging.error(f"Error during makemigrations: {e}")
+        logging.error(f"Standard Output:\n{e.stdout}")
+        logging.error(f"Error Output:\n{e.stderr}")
+        sys.exit(1)
 
+    # Run migrate
+    logging.info("Applying database migrations...")
     try:
         result = subprocess.run(
             [python_path, "manage.py", "migrate"],
@@ -101,7 +120,7 @@ def run_migrations():
         )
         logging.info(f"Migrations applied successfully:\n{result.stdout}")
     except subprocess.CalledProcessError as e:
-        logging.error(f"Subprocess error occurred: {e}")
+        logging.error(f"Error during migrate: {e}")
         logging.error(f"Standard Output:\n{e.stdout}")
         logging.error(f"Error Output:\n{e.stderr}")
         sys.exit(1)
