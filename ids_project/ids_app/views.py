@@ -308,6 +308,10 @@ def get_csv_data(request):
     anomaly_packets = 0
 
     try:
+        # Ensure the file exists
+        if not os.path.exists('traffic_data.csv'):
+            open('traffic_data.csv', 'w').close() 
+            
         with open('traffic_data.csv', 'r') as csvfile:
             reader = csv.DictReader(csvfile)
             for row in reader:

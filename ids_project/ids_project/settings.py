@@ -1,11 +1,9 @@
 import os
 import sys
 
-# Determine the base directory dynamically
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
-# Adjust BASE_DIR for PyInstaller
-if getattr(sys, 'frozen', False):  # Running in a PyInstaller bundle
+if getattr(sys, 'frozen', False):  # For PyInstaller compatibility
     BASE_DIR = sys._MEIPASS
 
 SECRET_KEY = 'django-insecure-5mq25l8=w8_m1d8i@ywe41$%&cundm)7eiwm0vpqk27s5%dr)6'
@@ -39,7 +37,7 @@ ROOT_URLCONF = 'ids_project.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [os.path.join(BASE_DIR, 'ids_app', 'templates')],  # Adjusted for PyInstaller
+        'DIRS': [os.path.join(BASE_DIR, 'ids_app', 'templates')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -57,7 +55,7 @@ WSGI_APPLICATION = 'ids_project.wsgi.application'
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
-        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),  # Adjusted for PyInstaller
+        'NAME': os.path.join(BASE_DIR, 'db.sqlite3'),
     }
 }
 
@@ -68,6 +66,4 @@ USE_L10N = True
 USE_TZ = True
 
 STATIC_URL = '/static/'
-
-# Optional: Static file directory adjustment for PyInstaller (if you use static files)
-STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]  # Adjusted for PyInstaller
+STATICFILES_DIRS = [os.path.join(BASE_DIR, 'static')]  # Update if using static files

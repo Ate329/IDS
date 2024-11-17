@@ -5,12 +5,9 @@ class IDSStatus(models.Model):
 
 class TrafficData(models.Model):
     timestamp = models.DateTimeField(auto_now_add=True)
-    total_packets = models.IntegerField()
-    normal_packets = models.IntegerField()
-    anomaly_packets = models.IntegerField()
-    protocol_type = models.CharField(max_length=10, default='unknown')
-    flag = models.CharField(max_length=10, default='unknown')
-
+    total_packets = models.IntegerField(default=0)
+    normal_packets = models.IntegerField(default=0)
+    anomaly_packets = models.IntegerField(default=0)
 
 class EmailSettings(models.Model):
     email_sender = models.EmailField(default="default@example.com")

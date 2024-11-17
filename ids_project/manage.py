@@ -1,5 +1,4 @@
 #!/usr/bin/env python
-"""Django's command-line utility for administrative tasks."""
 import os
 import sys
 import webbrowser
@@ -7,12 +6,10 @@ from threading import Timer
 
 
 def open_browser():
-    """Open the default web browser after a short delay."""
     webbrowser.open_new("http://127.0.0.1:8000")
 
 
 def main():
-    """Run administrative tasks."""
     os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'ids_project.settings')
     try:
         from django.core.management import execute_from_command_line
@@ -23,9 +20,8 @@ def main():
             "forget to activate a virtual environment?"
         ) from exc
 
-    # Check if the command is 'runserver', and open the browser
     if len(sys.argv) > 1 and sys.argv[1] == "runserver":
-        Timer(3, open_browser).start()  # Open browser after 3 seconds
+        Timer(3, open_browser).start()
 
     execute_from_command_line(sys.argv)
 
