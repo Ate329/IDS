@@ -10,7 +10,9 @@ import traceback
 # Configuration Variables
 # -----------------------------
 REPO_URL = "https://github.com/Ate329/IDS.git"
-PROJECT_DIR = os.getcwd()  # Use current directory
+PROJECT_NAME = "IDS"
+CURRENT_DIR = os.getcwd()
+PROJECT_DIR = os.path.join(CURRENT_DIR, PROJECT_NAME)
 VENV_DIR = ".venv"
 REQUIREMENTS_FILE = "requirements.txt"
 CSV_FILE_NAME = "traffic_data.csv"
@@ -34,10 +36,10 @@ logging.basicConfig(
 
 def git_pull():
     """Clone the repository or pull the latest changes if it already exists."""
-    if not os.path.exists(os.path.join(PROJECT_DIR, '.git')):
-        logging.info(f"Cloning repository from {REPO_URL} into current directory...")
+    if not os.path.exists(PROJECT_DIR):
+        logging.info(f"Cloning repository from {REPO_URL} into {PROJECT_DIR}...")
         try:
-            subprocess.run(["git", "clone", REPO_URL, "."], check=True)
+            subprocess.run(["git", "clone", REPO_URL, PROJECT_DIR], check=True)
             logging.info("Repository cloned successfully.")
         except subprocess.CalledProcessError as e:
             logging.error(f"Failed to clone repository: {e}")
@@ -45,7 +47,7 @@ def git_pull():
     else:
         logging.info("Repository already exists. Pulling latest changes...")
         try:
-            subprocess.run(["git", "pull"], check=True, cwd=PROJECT_DIR)
+            subprocess.run(["git", "-C", PROJECT_DIR, "pull"], check=True)
             logging.info("Repository updated successfully.")
         except subprocess.CalledProcessError as e:
             logging.error(f"Failed to pull latest changes: {e}")
@@ -154,9 +156,9 @@ def run_migrations():
     env["PATH"] = os.pathsep.join([os.path.dirname(python_path), env.get("PATH", "")])
     logging.debug(f"Environment PATH: {env['PATH']}")
 
-    # Run makemigrations
-    logging.info("Running makemigrations...")
-    command = [python_path, "manage.py", "makemigrations"]
+    # Run makemigrations for ids_app
+    logging.info("Running makemigrations for ids_app...")
+    command = [python_path, "manage.py", "makemigrations", "ids_app"]
     logging.info(f"Executing command: {' '.join(command)}")
     try:
         result = subprocess.run(
@@ -175,9 +177,9 @@ def run_migrations():
         logging.error("Traceback:", exc_info=True)
         sys.exit(1)
 
-    # Run migrate
-    logging.info("Applying database migrations...")
-    command = [python_path, "manage.py", "migrate"]
+    # Run migrate for ids_app
+    logging.info("Applying database migrations for ids_app...")
+    command = [python_path, "manage.py", "migrate", "ids_app"]
     logging.info(f"Executing command: {' '.join(command)}")
     try:
         result = subprocess.run(
@@ -195,6 +197,7 @@ def run_migrations():
         logging.error(f"An error occurred during migrate: {e}")
         logging.error("Traceback:", exc_info=True)
         sys.exit(1)
+
 
 def run_django():
     """Run the Django development server."""

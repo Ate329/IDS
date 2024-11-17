@@ -142,8 +142,8 @@ def toggle_ids(request):
                 # Get the detect_internal setting from your configuration or database
                 detect_internal = False  # Set this based on your application's settings
                 ids_instance = IntrusionDetectionSystem(
-                    "models/NSL-KDD-RF-model.joblib", 
-                    "models/feature_names.pkl",
+                    "../../models/NSL-KDD-RF-model.joblib", 
+                    "../../models/feature_names.pkl",
                     detect_internal=detect_internal
                 )
             if not ids_thread or not ids_thread.is_alive():
