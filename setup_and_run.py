@@ -21,6 +21,7 @@ REPO_URL = "https://github.com/Ate329/IDS.git"
 PROJECT_DIR = "IDS"
 VENV_DIR = ".venv"
 REQUIREMENTS_FILE = "requirements.txt"
+CSV_FILE_NAME = "traffic_data.csv"
 
 def git_pull():
     """Clone the repository or pull the latest changes if it already exists."""
@@ -75,6 +76,21 @@ def setup_virtualenv():
 
     logging.info("Installing dependencies...")
     subprocess.run([pip_path, "install", "-r", os.path.join(PROJECT_DIR, REQUIREMENTS_FILE)], check=True)
+
+def create_csv_file():
+    """Create an empty traffic_data.csv file in the project directory."""
+    csv_file_path = os.path.join(PROJECT_DIR, CSV_FILE_NAME)
+    if not os.path.exists(csv_file_path):
+        logging.info(f"Creating empty {CSV_FILE_NAME}...")
+        try:
+            with open(csv_file_path, 'w') as csv_file:
+                pass  # Creates an empty file without writing any data
+            logging.info(f"{CSV_FILE_NAME} created successfully.")
+        except Exception as e:
+            logging.error(f"Failed to create {CSV_FILE_NAME}: {e}")
+            sys.exit(1)
+    else:
+        logging.info(f"{CSV_FILE_NAME} already exists. Skipping creation.")
 
 def run_migrations():
     """Run makemigrations and migrate commands."""
@@ -156,6 +172,7 @@ if __name__ == "__main__":
         logging.info("Starting the setup process...")
         git_pull()
         setup_virtualenv()
+        create_csv_file()
         run_migrations()
         run_django()
     except subprocess.CalledProcessError as e:
