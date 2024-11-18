@@ -1,78 +1,65 @@
 import logging
-from django.shortcuts import render, redirect
-from django.views.decorators.csrf import ensure_csrf_cookie
-from django.views.decorators.http import require_http_methods
-from django.utils import timezone
-from datetime import timedelta
-from django.db import models
-from .models import IDSStatus, TrafficData
-from .IDS import IntrusionDetectionSystem
-import threading
-from collections import Counter
-import traceback
-from django.utils import timezone
-from datetime import timedelta
 import os
-from django.http import JsonResponse, HttpResponse
-from django.views.decorators.csrf import csrf_exempt
+import threading
+import traceback
 import csv
-from django.db.models import Sum
-from django.utils import timezone
 from datetime import timedelta
-from django.db.models.functions import TruncHour
-from django.http import JsonResponse
-from django.views.decorators.http import require_http_methods
-from .models import EmailSettings
-from .models import IDSSettings
+from collections import Counter
 
+from django.conf import settings
+from django.db.models import Sum
+from django.db.models.functions import TruncHour
+from django.http import JsonResponse, HttpResponse
+from django.shortcuts import render
+from django.utils import timezone
+from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
+from django.views.decorators.http import require_http_methods
+
+from .models import IDSStatus, TrafficData, EmailSettings, IDSSettings
+from .IDS import IntrusionDetectionSystem
 
 logger = logging.getLogger(__name__)
 
 ids_instance = None
 ids_thread = None
 
-
 @ensure_csrf_cookie
 def dashboard(request):
     return render(request, 'ids_app/dashboard.html')
-
 
 @ensure_csrf_cookie
 def logs(request):
     return render(request, 'ids_app/logs.html')
 
-
 @ensure_csrf_cookie
 def traffic(request):
     return render(request, 'ids_app/traffic.html')
 
-
 @ensure_csrf_cookie
-def settings(request):
+def settings_view(request):
     return render(request, 'ids_app/settings.html')
 
-
 def get_logs(request):
-    if not os.path.exists('ids_log.txt'):
-        open('ids_log.txt', 'a').close()
+    log_file_path = os.path.join(settings.BASE_DIR, 'ids_log.txt')
+    if not os.path.exists(log_file_path):
+        open(log_file_path, 'a').close()
     try:
-        with open('ids_log.txt', 'r') as log_file:
+        with open(log_file_path, 'r') as log_file:
             logs = log_file.read()
         return HttpResponse(logs, content_type='text/plain')
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
-
 def get_traffic_data_csv(request):
-    if not os.path.exists('traffic_data.csv'):
-        open('traffic_data.csv', 'a').close()
+    csv_file_path = os.path.join(settings.BASE_DIR, 'traffic_data.csv')
+    if not os.path.exists(csv_file_path):
+        open(csv_file_path, 'a').close()
     try:
-        with open('traffic_data.csv', 'r') as csv_file:
+        with open(csv_file_path, 'r') as csv_file:
             csv_content = csv_file.read()
         return HttpResponse(csv_content, content_type='text/csv')
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
-
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -85,35 +72,35 @@ def clean_database(request):
         logger.error(f"Error cleaning database: {str(e)}")
         return JsonResponse({'success': False, 'error': 'Failed to clean database'}, status=500)
 
-
 @csrf_exempt
 @require_http_methods(["POST"])
 def clean_log_file(request):
+    log_file_path = os.path.join(settings.BASE_DIR, 'ids_log.txt')
     try:
-        open('ids_log.txt', 'w').close()
+        open(log_file_path, 'w').close()
         return JsonResponse({'success': True, 'message': 'Log file cleaned successfully'})
     except Exception as e:
         logger.error(f"Error cleaning log file: {str(e)}")
         return JsonResponse({'success': False, 'error': 'Failed to clean log file'}, status=500)
 
-
 @csrf_exempt
 @require_http_methods(["POST"])
 def clean_traffic_data(request):
+    csv_file_path = os.path.join(settings.BASE_DIR, 'traffic_data.csv')
     try:
-        open('traffic_data.csv', 'w').close()
+        open(csv_file_path, 'w').close()
         return JsonResponse({'success': True, 'message': 'Traffic data file cleaned successfully'})
     except Exception as e:
         logger.error(f"Error cleaning traffic data file: {str(e)}")
         return JsonResponse({'success': False, 'error': 'Failed to clean traffic data file'}, status=500)
 
-
 @csrf_exempt
 @require_http_methods(["POST"])
 def clean_scaler(request):
+    scaler_file_path = os.path.join(settings.BASE_DIR, 'scaler.joblib')
     try:
-        if os.path.exists('scaler.joblib'):
-            os.remove('scaler.joblib')
+        if os.path.exists(scaler_file_path):
+            os.remove(scaler_file_path)
             return JsonResponse({'success': True, 'message': 'Scaler file removed successfully'})
         else:
             return JsonResponse({'success': True, 'message': 'Scaler file does not exist'})
@@ -139,12 +126,13 @@ def toggle_ids(request):
         if not status.is_active:
             logger.info("Activating IDS")
             if not ids_instance:
-                # Get the detect_internal setting from your configuration or database
-                detect_internal = False  # Set this based on your application's settings
+                settings_obj = IDSSettings.get_settings()
+                model_path = os.path.join(settings.BASE_DIR, 'models', 'NSL-KDD-RF-model.joblib')
+                feature_names_path = os.path.join(settings.BASE_DIR, 'models', 'feature_names.pkl')
                 ids_instance = IntrusionDetectionSystem(
-                    "../../models/NSL-KDD-RF-model.joblib", 
-                    "../../models/feature_names.pkl",
-                    detect_internal=detect_internal
+                    model_path,
+                    feature_names_path,
+                    detect_internal=settings_obj.detect_internal
                 )
             if not ids_thread or not ids_thread.is_alive():
                 ids_thread = threading.Thread(
