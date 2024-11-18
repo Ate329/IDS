@@ -23,6 +23,8 @@ logger = logging.getLogger(__name__)
 ids_instance = None
 ids_thread = None
 
+ROOT_DIR = os.path.dirname(settings.BASE_DIR)
+
 @ensure_csrf_cookie
 def dashboard(request):
     return render(request, 'ids_app/dashboard.html')
@@ -127,8 +129,8 @@ def toggle_ids(request):
             logger.info("Activating IDS")
             if not ids_instance:
                 settings_obj = IDSSettings.get_settings()
-                model_path = os.path.join(settings.BASE_DIR, 'models', 'NSL-KDD-RF-model.joblib')
-                feature_names_path = os.path.join(settings.BASE_DIR, 'models', 'feature_names.pkl')
+                model_path = os.path.join(ROOT_DIR, 'models', 'NSL-KDD-RF-model.joblib')
+                feature_names_path = os.path.join(ROOT_DIR, 'models', 'feature_names.pkl')
                 ids_instance = IntrusionDetectionSystem(
                     model_path,
                     feature_names_path,
