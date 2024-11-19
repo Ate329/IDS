@@ -1,67 +1,90 @@
 import logging
-import os
-import threading
-import traceback
-import csv
-from datetime import timedelta
-from collections import Counter
-
-from django.conf import settings
-from django.db.models import Sum
-from django.db.models.functions import TruncHour
-from django.http import JsonResponse, HttpResponse
-from django.shortcuts import render
-from django.utils import timezone
-from django.views.decorators.csrf import csrf_exempt, ensure_csrf_cookie
+from django.shortcuts import render, redirect
+from django.views.decorators.csrf import ensure_csrf_cookie
 from django.views.decorators.http import require_http_methods
-
-from .models import IDSStatus, TrafficData, EmailSettings, IDSSettings
+from django.utils import timezone
+from datetime import timedelta
+from django.db import models
+from .models import IDSStatus, TrafficData
 from .IDS import IntrusionDetectionSystem
+import threading
+from collections import Counter
+import traceback
+from django.utils import timezone
+from datetime import timedelta
+import os
+from django.http import JsonResponse, HttpResponse
+from django.views.decorators.csrf import csrf_exempt
+import csv
+from django.db.models import Sum
+from django.utils import timezone
+from datetime import timedelta
+from django.db.models.functions import TruncHour
+from django.http import JsonResponse
+from django.views.decorators.http import require_http_methods
+from .models import EmailSettings
+from .models import IDSSettings
+import json
+
+
+# Load configuration
+PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+config_path = os.path.join(PROJECT_DIR, "config.json")
+if os.path.exists(config_path):
+    with open(config_path, "r") as config_file:
+        config = json.load(config_file)
+    MODELS_DIR = config.get("models_dir", "models")  # Fallback to "models" if not found
+else:
+    MODELS_DIR = "models"  # Default fallback
+
 
 logger = logging.getLogger(__name__)
 
 ids_instance = None
 ids_thread = None
 
-ROOT_DIR = os.path.dirname(settings.BASE_DIR)
 
 @ensure_csrf_cookie
 def dashboard(request):
     return render(request, 'ids_app/dashboard.html')
 
+
 @ensure_csrf_cookie
 def logs(request):
     return render(request, 'ids_app/logs.html')
+
 
 @ensure_csrf_cookie
 def traffic(request):
     return render(request, 'ids_app/traffic.html')
 
+
 @ensure_csrf_cookie
-def settings_view(request):
+def settings(request):
     return render(request, 'ids_app/settings.html')
 
+
 def get_logs(request):
-    log_file_path = os.path.join(settings.BASE_DIR, 'ids_log.txt')
-    if not os.path.exists(log_file_path):
-        open(log_file_path, 'a').close()
+    if not os.path.exists('ids_log.txt'):
+        open('ids_log.txt', 'a').close()
     try:
-        with open(log_file_path, 'r') as log_file:
+        with open('ids_log.txt', 'r') as log_file:
             logs = log_file.read()
         return HttpResponse(logs, content_type='text/plain')
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
 
+
 def get_traffic_data_csv(request):
-    csv_file_path = os.path.join(settings.BASE_DIR, 'traffic_data.csv')
-    if not os.path.exists(csv_file_path):
-        open(csv_file_path, 'a').close()
+    if not os.path.exists('traffic_data.csv'):
+        open('traffic_data.csv', 'a').close()
     try:
-        with open(csv_file_path, 'r') as csv_file:
+        with open('traffic_data.csv', 'r') as csv_file:
             csv_content = csv_file.read()
         return HttpResponse(csv_content, content_type='text/csv')
     except Exception as e:
         return JsonResponse({'error': str(e)}, status=500)
+
 
 @csrf_exempt
 @require_http_methods(["POST"])
@@ -74,35 +97,35 @@ def clean_database(request):
         logger.error(f"Error cleaning database: {str(e)}")
         return JsonResponse({'success': False, 'error': 'Failed to clean database'}, status=500)
 
+
 @csrf_exempt
 @require_http_methods(["POST"])
 def clean_log_file(request):
-    log_file_path = os.path.join(settings.BASE_DIR, 'ids_log.txt')
     try:
-        open(log_file_path, 'w').close()
+        open('ids_log.txt', 'w').close()
         return JsonResponse({'success': True, 'message': 'Log file cleaned successfully'})
     except Exception as e:
         logger.error(f"Error cleaning log file: {str(e)}")
         return JsonResponse({'success': False, 'error': 'Failed to clean log file'}, status=500)
 
+
 @csrf_exempt
 @require_http_methods(["POST"])
 def clean_traffic_data(request):
-    csv_file_path = os.path.join(settings.BASE_DIR, 'traffic_data.csv')
     try:
-        open(csv_file_path, 'w').close()
+        open('traffic_data.csv', 'w').close()
         return JsonResponse({'success': True, 'message': 'Traffic data file cleaned successfully'})
     except Exception as e:
         logger.error(f"Error cleaning traffic data file: {str(e)}")
         return JsonResponse({'success': False, 'error': 'Failed to clean traffic data file'}, status=500)
 
+
 @csrf_exempt
 @require_http_methods(["POST"])
 def clean_scaler(request):
-    scaler_file_path = os.path.join(settings.BASE_DIR, 'scaler.joblib')
     try:
-        if os.path.exists(scaler_file_path):
-            os.remove(scaler_file_path)
+        if os.path.exists('scaler.joblib'):
+            os.remove('scaler.joblib')
             return JsonResponse({'success': True, 'message': 'Scaler file removed successfully'})
         else:
             return JsonResponse({'success': True, 'message': 'Scaler file does not exist'})
@@ -128,13 +151,11 @@ def toggle_ids(request):
         if not status.is_active:
             logger.info("Activating IDS")
             if not ids_instance:
-                settings_obj = IDSSettings.get_settings()
-                model_path = os.path.join(ROOT_DIR, 'models', 'NSL-KDD-RF-model.joblib')
-                feature_names_path = os.path.join(ROOT_DIR, 'models', 'feature_names.pkl')
+                # Use the absolute path in IDS initialization
                 ids_instance = IntrusionDetectionSystem(
-                    model_path,
-                    feature_names_path,
-                    detect_internal=settings_obj.detect_internal
+                    os.path.join(MODELS_DIR, "NSL-KDD-RF-model.joblib"),
+                    os.path.join(MODELS_DIR, "feature_names.pkl"),
+                    detect_internal=False
                 )
             if not ids_thread or not ids_thread.is_alive():
                 ids_thread = threading.Thread(

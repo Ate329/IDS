@@ -5,6 +5,7 @@ import platform
 import shutil
 import logging
 import traceback
+import json
 
 # -----------------------------
 # Configuration Variables
@@ -238,6 +239,19 @@ def run_django():
         logging.error("Traceback:", exc_info=True)
         sys.exit(1)
 
+
+def write_config():
+    """Write configuration with absolute paths."""
+    models_dir = os.path.abspath(os.path.join(PROJECT_DIR, "models"))
+    config = {
+        "models_dir": models_dir,
+    }
+    config_path = os.path.join(PROJECT_DIR, "config.json")
+    with open(config_path, "w") as config_file:
+        json.dump(config, config_file, indent=4)
+    logging.info(f"Configuration written to {config_path}")
+
+
 # -----------------------------
 # Main Execution Block
 # -----------------------------
@@ -248,6 +262,7 @@ if __name__ == "__main__":
         setup_virtualenv()
         create_csv_file()
         run_migrations()
+        write_config()
         run_django()
     except Exception as e:
         logging.error(f"An unexpected error occurred: {e}")
