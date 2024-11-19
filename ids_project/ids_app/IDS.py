@@ -16,13 +16,20 @@ import psutil
 from email.mime.multipart import MIMEMultipart
 from email.mime.text import MIMEText
 import csv
+import os 
 import traceback
 from .models import EmailSettings
 from django.core.exceptions import ObjectDoesNotExist
 
+# Absolute paths for important files
+PROJECT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+MODELS_DIR = os.path.join(PROJECT_DIR, "models")  # Models directory
+TRAFFIC_DATA_CSV = os.path.join(PROJECT_DIR, "traffic_data.csv")  # Traffic data CSV
+SCALER_FILE = os.path.join(PROJECT_DIR, "scaler.joblib")  # Scaler file
+IDS_LOG = os.path.join(PROJECT_DIR, "ids_log.txt")  # Log file
 
 class IntrusionDetectionSystem:
-    def __init__(self, model_path, feature_names_path, interface=None, log_file="ids_log.txt", buffer_size=1000, csv_output="traffic_data.csv", detect_internal=False):
+    def __init__(self, model_path, feature_names_path, interface=None, log_file=IDS_LOG, buffer_size=1000, csv_output=TRAFFIC_DATA_CSV, detect_internal=False):
         self.model = joblib.load(model_path)
         self.feature_names = joblib.load(feature_names_path)
         self.setup_logging(log_file)
@@ -79,7 +86,7 @@ class IntrusionDetectionSystem:
         self.interface = interface
         self.feature_extractor = NetworkFeatureExtractor(self.interface)
     
-    def load_scaler(self, path="scaler.joblib"):
+    def load_scaler(self, path=SCALER_FILE):
         try:
             self.scaler = joblib.load(path)
             self.scaler_fitted = True
@@ -92,7 +99,7 @@ class IntrusionDetectionSystem:
             self.logger.error(f"Error loading scaler: {str(e)}")
             self.scaler_fitted = False
 
-    def save_scaler(self, path="scaler.joblib"):
+    def save_scaler(self, path=SCALER_FILE):
         if self.scaler_fitted:
             joblib.dump(self.scaler, path)
             self.logger.info(f"Scaler saved to {path}")

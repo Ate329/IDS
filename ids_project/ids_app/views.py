@@ -27,18 +27,14 @@ from .models import IDSSettings
 import json
 
 
-# Load configuration
-PROJECT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-config_path = os.path.join(PROJECT_DIR, "config.json")
-if os.path.exists(config_path):
-    with open(config_path, "r") as config_file:
-        config = json.load(config_file)
-    MODELS_DIR = config.get("models_dir", "models")  # Fallback to "models" if not found
-else:
-    MODELS_DIR = "models"  # Default fallback
-
-
 logger = logging.getLogger(__name__)
+
+# Absolute paths for important files
+PROJECT_DIR = os.path.abspath(os.path.join(os.path.dirname(__file__), "..", ".."))
+MODELS_DIR = os.path.join(PROJECT_DIR, "models")  # Models directory
+TRAFFIC_DATA_CSV = os.path.join(PROJECT_DIR, "traffic_data.csv")  # Traffic data CSV
+SCALER_FILE = os.path.join(PROJECT_DIR, "scaler.joblib")  # Scaler file
+IDS_LOG = os.path.join(PROJECT_DIR, "ids_log.txt")  # Log file
 
 ids_instance = None
 ids_thread = None
@@ -65,10 +61,10 @@ def settings(request):
 
 
 def get_logs(request):
-    if not os.path.exists('ids_log.txt'):
-        open('ids_log.txt', 'a').close()
+    if not os.path.exists(IDS_LOG):
+        open(IDS_LOG, 'a').close()
     try:
-        with open('ids_log.txt', 'r') as log_file:
+        with open(IDS_LOG, 'r') as log_file:
             logs = log_file.read()
         return HttpResponse(logs, content_type='text/plain')
     except Exception as e:
@@ -76,10 +72,10 @@ def get_logs(request):
 
 
 def get_traffic_data_csv(request):
-    if not os.path.exists('traffic_data.csv'):
-        open('traffic_data.csv', 'a').close()
+    if not os.path.exists(TRAFFIC_DATA_CSV):
+        open(TRAFFIC_DATA_CSV, 'a').close()
     try:
-        with open('traffic_data.csv', 'r') as csv_file:
+        with open(TRAFFIC_DATA_CSV, 'r') as csv_file:
             csv_content = csv_file.read()
         return HttpResponse(csv_content, content_type='text/csv')
     except Exception as e:
@@ -124,8 +120,8 @@ def clean_traffic_data(request):
 @require_http_methods(["POST"])
 def clean_scaler(request):
     try:
-        if os.path.exists('scaler.joblib'):
-            os.remove('scaler.joblib')
+        if os.path.exists(SCALER_FILE):
+            os.remove(SCALER_FILE)
             return JsonResponse({'success': True, 'message': 'Scaler file removed successfully'})
         else:
             return JsonResponse({'success': True, 'message': 'Scaler file does not exist'})
