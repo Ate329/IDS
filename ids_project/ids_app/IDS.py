@@ -178,10 +178,13 @@ class IntrusionDetectionSystem:
             features = self.feature_extractor.extract_features(packet)
 
             if features:
-                # The internal traffic check is now handled in NetworkFeatureExtractor
+                # Ensure all expected keys exist
+                for key in self.feature_names:
+                    if key not in features:
+                        features[key] = 0  # Assign default value for missing keys
+
                 df = pd.DataFrame([features])
                 df_aligned = self.align_features(df, self.feature_names)
-                # Skip scaling; use aligned features directly
                 df_input = df_aligned
 
                 prediction = self.model.predict(df_input)[0]
