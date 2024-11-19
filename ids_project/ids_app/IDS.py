@@ -34,7 +34,6 @@ class IntrusionDetectionSystem:
         self.feature_names = joblib.load(feature_names_path)
         self.setup_logging(log_file)
         self.scaler = StandardScaler()
-        self.load_scaler()
         self.buffer = deque(maxlen=buffer_size)
         self.csv_output = csv_output
         self.interface = interface
@@ -86,25 +85,6 @@ class IntrusionDetectionSystem:
         self.interface = interface
         self.feature_extractor = NetworkFeatureExtractor(self.interface)
     
-    def load_scaler(self, path=SCALER_FILE):
-        try:
-            self.scaler = joblib.load(path)
-            self.scaler_fitted = True
-            self.logger.info(f"Scaler loaded from {path}")
-        except FileNotFoundError:
-            self.logger.warning(
-                f"Scaler file not found at {path}, will fit scaler during runtime")
-            self.scaler_fitted = False
-        except Exception as e:
-            self.logger.error(f"Error loading scaler: {str(e)}")
-            self.scaler_fitted = False
-
-    def save_scaler(self, path=SCALER_FILE):
-        if self.scaler_fitted:
-            joblib.dump(self.scaler, path)
-            self.logger.info(f"Scaler saved to {path}")
-        else:
-            self.logger.warning("Scaler not fitted, cannot save")
 
     def start_detection(self, duration=None):
         self.logger.info(f"Starting Intrusion Detection System on interface: {self.interface}")
@@ -134,7 +114,6 @@ class IntrusionDetectionSystem:
             self.processing_thread.join()
         self.logger.info("Intrusion Detection System stopped")
         self.log_performance_metrics()
-        self.save_scaler()
 
     def is_running(self):
         return self.is_active
@@ -202,11 +181,11 @@ class IntrusionDetectionSystem:
                 # The internal traffic check is now handled in NetworkFeatureExtractor
                 df = pd.DataFrame([features])
                 df_aligned = self.align_features(df, self.feature_names)
-                df_scaled = pd.DataFrame(self.scaler.transform(
-                    df_aligned), columns=self.feature_names)
+                # Skip scaling; use aligned features directly
+                df_input = df_aligned
 
-                prediction = self.model.predict(df_scaled)[0]
-                probabilities = self.model.predict_proba(df_scaled)[0]
+                prediction = self.model.predict(df_input)[0]
+                probabilities = self.model.predict_proba(df_input)[0]
 
                 self.save_to_csv(features, prediction)
 
