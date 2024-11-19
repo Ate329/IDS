@@ -224,19 +224,16 @@ class IntrusionDetectionSystem:
     def log_intrusion(self, packet, features, probability):
         src_ip = packet[IP].src if IP in packet else "Unknown"
         dst_ip = packet[IP].dst if IP in packet else "Unknown"
-        protocol = features['protocol_type']
-        service = features['service']
+        protocol = features.get('protocol_type', 'unknown')  # Use .get() with a default
+        service = features.get('service', 'none')  # Handle missing service key
 
         severity = "HIGH" if probability > 0.8 else "MEDIUM" if probability > 0.6 else "LOW"
 
         log_message = (f"ALERT: Potential intrusion detected! - {severity}\n"
-                       f"Source IP: {src_ip}, Destination IP: {dst_ip}\n"
-                       f"Protocol: {protocol}, Service: {service}\n"
-                       f"Confidence: {probability:.2f}\n"
-                       f"Features: {features}")
-
-        # if severity in ["HIGH", "MEDIUM"]:
-        #    print(log_message)
+                    f"Source IP: {src_ip}, Destination IP: {dst_ip}\n"
+                    f"Protocol: {protocol}, Service: {service}\n"
+                    f"Confidence: {probability:.2f}\n"
+                    f"Features: {features}")
 
         self.logger.warning(log_message)
         self.anomaly_sources[src_ip] += 1
@@ -244,8 +241,8 @@ class IntrusionDetectionSystem:
     def log_normal(self, packet, features, probability):
         src_ip = packet[IP].src if IP in packet else "Unknown"
         dst_ip = packet[IP].dst if IP in packet else "Unknown"
-        protocol = features['protocol_type']
-        service = features['service']
+        protocol = features.get('protocol_type', 'unknown')  # Use .get() with a default
+        service = features.get('service', 'none')  # Handle missing service key
 
         log_message = (f"Normal traffic detected\n"
                        f"Source IP: {src_ip}, Destination IP: {dst_ip}\n"

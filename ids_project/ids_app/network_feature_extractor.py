@@ -115,7 +115,8 @@ class NetworkFeatureExtractor:
             'protocol_type': 'arp',
             'src_ip': packet[ARP].psrc,
             'dst_ip': packet[ARP].pdst,
-            'operation': 'request' if packet[ARP].op == 1 else 'reply'
+            'operation': 'request' if packet[ARP].op == 1 else 'reply',
+            'service': 'none'  # Add a default service for ARP packets
         }
 
     def _extract_ip_features(self, packet: scapy.Packet) -> Dict:
