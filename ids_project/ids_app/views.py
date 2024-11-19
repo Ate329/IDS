@@ -141,42 +141,6 @@ def get_ids_status(request):
     return JsonResponse({'is_active': status.is_active})
 
 
-@require_http_methods(["POST"])
-def toggle_ids(request):
-    global ids_instance, ids_thread
-    status, created = IDSStatus.objects.get_or_create(
-        pk=1, defaults={'is_active': False})
-
-    try:
-        if not status.is_active:
-            logger.info("Activating IDS")
-            if not ids_instance:
-                # Use the absolute path in IDS initialization
-                ids_instance = IntrusionDetectionSystem(
-                    os.path.join(MODELS_DIR, "NSL-KDD-RF-model.joblib"),
-                    os.path.join(MODELS_DIR, "feature_names.pkl"),
-                    detect_internal=False
-                )
-            if not ids_thread or not ids_thread.is_alive():
-                ids_thread = threading.Thread(
-                    target=ids_instance.start_detection)
-                ids_thread.start()
-            status.is_active = True
-        else:
-            logger.info("Deactivating IDS")
-            if ids_instance:
-                ids_instance.stop_detection()
-            status.is_active = False
-
-        status.save()
-        logger.info(f"IDS status toggled to: {status.is_active}")
-        return JsonResponse({'is_active': status.is_active})
-    except Exception as e:
-        error_message = f"Error toggling IDS: {str(e)}\n{traceback.format_exc()}"
-        logger.error(error_message)
-        return JsonResponse({'error': error_message}, status=500)
-
-
 def get_available_interfaces(request):
     interfaces = IntrusionDetectionSystem.get_available_interfaces()
     return JsonResponse({'interfaces': interfaces})
@@ -409,8 +373,8 @@ def toggle_ids(request):
             if not ids_instance:
                 settings = IDSSettings.get_settings()
                 ids_instance = IntrusionDetectionSystem(
-                    "models/NSL-KDD-RF-model.joblib", 
-                    "models/feature_names.pkl",
+                    os.path.join(MODELS_DIR, "NSL-KDD-RF-model.joblib"),
+                    os.path.join(MODELS_DIR, "feature_names.pkl"),
                     detect_internal=settings.detect_internal
                 )
             if not ids_thread or not ids_thread.is_alive():

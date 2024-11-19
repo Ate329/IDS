@@ -7,3 +7,4 @@ __pycache__/
 migrations/
 build/
 *.spec
+setup.log
