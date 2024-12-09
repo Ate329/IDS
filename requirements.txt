@@ -1,6 +1,6 @@
 altgraph==0.17.4
 asgiref==3.8.1
-Django==5.1.1
+Django==5.1.4
 joblib==1.4.2
 numpy==2.1.1
 packaging==24.2
