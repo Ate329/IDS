@@ -390,6 +390,6 @@ def toggle_ids(request):
         logger.info(f"IDS status toggled to: {status.is_active}")
         return JsonResponse({'is_active': status.is_active})
     except Exception as e:
-        error_message = f"Error toggling IDS: {str(e)}\n{traceback.format_exc()}"
-        logger.error(error_message)
-        return JsonResponse({'error': error_message}, status=500)
+        error_message = f"Error toggling IDS: {str(e)}"
+        logger.error(f"{error_message}\n{traceback.format_exc()}")
+        return JsonResponse({'error': "An internal error has occurred. Please try again later."}, status=500)
