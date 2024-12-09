@@ -68,7 +68,8 @@ def get_logs(request):
             logs = log_file.read()
         return HttpResponse(logs, content_type='text/plain')
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        logger.error("Error reading logs: %s", traceback.format_exc())
+        return JsonResponse({'error': 'An internal error has occurred.'}, status=500)
 
 
 def get_traffic_data_csv(request):
@@ -79,7 +80,8 @@ def get_traffic_data_csv(request):
             csv_content = csv_file.read()
         return HttpResponse(csv_content, content_type='text/csv')
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        logger.error("Error reading traffic data CSV: %s", traceback.format_exc())
+        return JsonResponse({'error': 'An internal error has occurred.'}, status=500)
 
 
 @csrf_exempt
