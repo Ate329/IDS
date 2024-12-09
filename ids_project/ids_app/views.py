@@ -304,7 +304,8 @@ def get_csv_data(request):
             'flags': dict(flag_counter.most_common(5))
         })
     except Exception as e:
-        return JsonResponse({'error': str(e)}, status=500)
+        logger.error("An error occurred while processing the CSV data: %s", str(e))
+        return JsonResponse({'error': 'An internal error has occurred!'}, status=500)
 
 
 @require_http_methods(["GET"])
