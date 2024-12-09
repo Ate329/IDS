@@ -96,8 +96,13 @@ The dataset used for training the machine learning model is the **[NSL-KDD Datas
 - **Joblib** for model and scaler management
 - **Pandas** and **NumPy** for data processing
 
-### **Installation Steps**
+### **Installation**
+   Download setup_and_run.py and run the file
+   ```
+   python setup_and_run.py
+   ```
 
+### **Manual Installation (not recommended)**
 1. Clone the repository:
    ```
    git clone https://github.com/Ate329/IDS.git
