@@ -155,6 +155,28 @@ def run_migrations():
     env["PATH"] = os.pathsep.join([os.path.dirname(python_path), env.get("PATH", "")])
     logging.debug(f"Environment PATH: {env['PATH']}")
 
+    # Run makemigrations for main app
+    logging.info("Running makemigrations for main app...")
+    command = [python_path, manage_py_path, "makemigrations"]
+    logging.info(f"Executing command: {' '.join(command)}")
+    try:
+        result = subprocess.run(
+            command,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=env
+        )
+        logging.info(f"Makemigrations output:\n{result.stdout}")
+        if result.stderr:
+            logging.warning(f"Makemigrations warnings/errors:\n{result.stderr}")
+    except Exception as e:
+        logging.error(f"An error occurred during makemigrations: {e}")
+        logging.error("Traceback:", exc_info=True)
+        sys.exit(1)
+
+
     # Run makemigrations for ids_app
     logging.info("Running makemigrations for ids_app...")
     command = [python_path, manage_py_path, "makemigrations", "ids_app"]
@@ -176,9 +198,30 @@ def run_migrations():
         logging.error("Traceback:", exc_info=True)
         sys.exit(1)
 
+    # Run migrate for main app
+    logging.info("Applying database migrations for main app...")
+    command = [python_path, manage_py_path, "migrate"]
+    logging.info(f"Executing command: {' '.join(command)}")
+    try:
+        result = subprocess.run(
+            command,
+            check=True,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            env=env
+        )
+        logging.info(f"Migrate output:\n{result.stdout}")
+        if result.stderr:
+            logging.warning(f"Migrate warnings/errors:\n{result.stderr}")
+    except Exception as e:
+        logging.error(f"An error occurred during migrate: {e}")
+        logging.error("Traceback:", exc_info=True)
+        sys.exit(1)
+
     # Run migrate for ids_app
     logging.info("Applying database migrations for ids_app...")
-    command = [python_path, "manage.py", "migrate", "ids_app"]
+    command = [python_path, manage_py_path, "migrate", "ids_app"]
     logging.info(f"Executing command: {' '.join(command)}")
     try:
         result = subprocess.run(

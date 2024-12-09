@@ -9,3 +9,4 @@ build/
 *.spec
 setup.log
 KDDTrain+-combined.csv
+IDS/
