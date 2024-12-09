@@ -157,7 +157,7 @@ def run_migrations():
 
     # Run makemigrations for ids_app
     logging.info("Running makemigrations for ids_app...")
-    command = [python_path, "manage.py", "makemigrations", "ids_app"]
+    command = [python_path, manage_py_path, "makemigrations", "ids_app"]
     logging.info(f"Executing command: {' '.join(command)}")
     try:
         result = subprocess.run(
@@ -236,7 +236,6 @@ def run_django():
         logging.error(f"An error occurred while running the server: {e}")
         logging.error("Traceback:", exc_info=True)
         sys.exit(1)
-
 
 # -----------------------------
 # Main Execution Block
