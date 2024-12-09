@@ -7,6 +7,7 @@ urlpatterns = [
     path('logs/', ensure_csrf_cookie(views.logs), name='logs'),
     path('traffic/', ensure_csrf_cookie(views.traffic), name='traffic'),
     path('settings/', ensure_csrf_cookie(views.settings), name='settings'),
+    path('api/get-ids-settings/', views.get_ids_settings, name='get_ids_settings'),
     path('api/ids-status/', views.get_ids_status, name='get_ids_status'),
     path('api/toggle-ids/', views.toggle_ids, name='toggle_ids'),
     path('api/traffic-data/', views.get_traffic_data, name='get_traffic_data'),
