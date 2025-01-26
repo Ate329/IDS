@@ -8,6 +8,8 @@ The IDS leverages the **[NSL-KDD Feature Extractor](https://github.com/Ate329/NS
 
 The dataset used for training the machine learning model is the **[NSL-KDD Dataset](https://www.kaggle.com/datasets/hassan06/nslkdd/data)**.
 
+**Currently the web interface is not working, any who can fix it can try to submit a PR for it. I'll try to work on a easy CLI for now**
+
 ## **Features**
 
 1. **Real-Time Traffic Monitoring**
